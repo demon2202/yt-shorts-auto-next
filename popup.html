@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Shorts Auto Next</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Shorts Auto Next</h1>
+      <p>Smooth auto-next for YouTube Shorts.</p>
+    </header>
+
+    <section class="card top">
+      <div>
+        <div class="label">Auto next</div>
+        <div class="hint">Moves when a Short is ending.</div>
+      </div>
+      <label class="switch"><input id="enabled" type="checkbox"><span></span></label>
+    </section>
+
+    <section class="card">
+      <div class="label space">Mode</div>
+      <div class="presets">
+        <button id="presetSmooth" type="button">Smooth</button>
+        <button id="presetFast" type="button">Fast</button>
+        <button id="presetSafe" type="button">Safe BG</button>
+      </div>
+      <div class="hint">Smooth is recommended. Safe BG triggers earlier for background tabs.</div>
+    </section>
+
+    <section class="card">
+      <label class="field">
+        <span class="label">Trigger before end</span>
+        <input id="endThreshold" type="range" min="0.25" max="3" step="0.05">
+        <span id="thresholdValue" class="value"></span>
+      </label>
+      <label class="field">
+        <span class="label">Delay</span>
+        <input id="delayMs" type="range" min="0" max="1000" step="20">
+        <span id="delayValue" class="value"></span>
+      </label>
+    </section>
+
+    <section class="card compact">
+      <label class="check"><input id="smoothMode" type="checkbox"> Smooth movement</label>
+      <label class="check"><input id="aggressiveBackground" type="checkbox"> Background booster</label>
+      <label class="check"><input id="showMiniPanel" type="checkbox"> Show mini panel</label>
+      <label class="check"><input id="pauseWhenInteracting" type="checkbox"> Pause while typing</label>
+    </section>
+
+    <footer>
+      <div id="status">Ready</div>
+      <button id="reset" type="button">Reset</button>
+    </footer>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
