@@ -201,25 +201,46 @@ function backgroundShortsCheck(options) {
     if (reel) {
       let node = reel.nextElementSibling;
       for (let i = 0; node && i < 10; i++, node = node.nextElementSibling) {
+        // Ensure we are only looking inside actual reel containers
+        const isReel = ['ytd-reel-video-renderer','ytd-shorts-video-renderer','ytd-reel-item-renderer','[data-shorts-video-id]','[is-active]'].some(s => node.matches(s));
+        if (!isReel) continue;
+
         for (const a of [...node.querySelectorAll?.('a[href*="/shorts/"]') || []]) {
           const url = shortUrl(a.getAttribute('href') || a.href);
           if (url && !url.endsWith(`/shorts/${current}`)) return url;
         }
       }
     }
+    // Extreme fallback
     for (const a of [...document.querySelectorAll('a[href*="/shorts/"]')]) {
       const url = shortUrl(a.getAttribute('href') || a.href);
-      if (url && !url.endsWith(`/shorts/${current}`)) return url;
+      if (url && !url.endsWith(`/shorts/${current}`)) {
+        if (!a.closest?.('[aria-label="Related"]') && !a.closest?.('[aria-label="Suggested"]')) {
+          return url;
+        }
+      }
     }
     return '';
   }
 
+  // ... (previous code)
+  
+  // Update the navigation sequence in backgroundShortsCheck
   const buttonSelectors = ['#navigation-button-down button','[id="navigation-button-down"] button','button[aria-label="Next video"]','button[aria-label="Next"]','button[title="Next"]','button[aria-label*="Next" i]','button[aria-label*="Down" i]'];
   for (const selector of buttonSelectors) {
     const btn = [...document.querySelectorAll(selector)].find(el => !el.disabled && visible(el));
     if (btn) { click(btn); return { ok: true, reason: 'clicked-button' }; }
   }
 
+  // NEW: Try keyboard emulation in background
+  window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 40, key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+  window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 40, key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+  // Note: backgroundShortsCheck doesn't have an async 'moved' check like content.js, 
+  // it just returns. The next tick will verify if it moved.
+  // To be safe, we can just return here.
+  return { ok: true, reason: 'keyboard-down' };
+
+  // (The rest of the fallback logic follows)
   const reel = activeReel();
   if (reel?.nextElementSibling) {
     try { reel.nextElementSibling.scrollIntoView({ block: 'center', inline: 'nearest', behavior: options.smoothMode ? 'smooth' : 'instant' }); } catch (_) {}

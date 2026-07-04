@@ -76,15 +76,26 @@
     if (reel) {
       let node = reel.nextElementSibling;
       for (let i = 0; node && i < 10; i++, node = node.nextElementSibling) {
+        // Ensure we are only looking inside actual reel containers
+        const isReel = ['ytd-reel-video-renderer','ytd-shorts-video-renderer','ytd-reel-item-renderer','[data-shorts-video-id]','[is-active]'].some(s => node.matches(s));
+        if (!isReel) continue;
+
         for (const a of [...node.querySelectorAll?.('a[href*="/shorts/"]') || []]) {
           const url = normalizeShortUrl(a.getAttribute('href') || a.href);
           if (url && !url.endsWith(`/shorts/${current}`)) return url;
         }
       }
     }
-    for (const a of [...document.querySelectorAll('a[href*="/shorts/"]')]) {
+    // Extreme fallback: search the whole page but try to find one that looks like it's in the feed
+    const allShorts = [...document.querySelectorAll('a[href*="/shorts/"]')];
+    for (const a of allShorts) {
       const url = normalizeShortUrl(a.getAttribute('href') || a.href);
-      if (url && !url.endsWith(`/shorts/${current}`)) return url;
+      if (url && !url.endsWith(`/shorts/${current}`)) {
+        // Avoid "related" or "suggested" links if possible
+        if (!a.closest?.('[aria-label="Related"]') && !a.closest?.('[aria-label="Suggested"]')) {
+          return url;
+        }
+      }
     }
     return '';
   }
@@ -198,23 +209,35 @@
     lastAdvanceAt = Date.now();
     console.log(`[SAN] forceNext triggered`);
 
+    // 1. Native Button
     const btn = findNextButton();
     if (btn) {
       console.log(`[SAN] Clicking next button:`, btn);
       click(btn);
+      if (await moved(oldPath)) {
+        console.log(`[SAN] Moved via button`);
+        return afterMove();
+      }
     }
+
+    // 2. Keyboard ArrowDown
+    console.log(`[SAN] Trying Keyboard ArrowDown`);
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 40, key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+    window.dispatchEvent(new KeyboardEvent('keyup', { keyCode: 40, key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
     if (await moved(oldPath)) {
-      console.log(`[SAN] Moved via button`);
+      console.log(`[SAN] Moved via keyboard`);
       return afterMove();
     }
 
-    console.log(`[SAN] Button failed, trying scrollFeed`);
+    // 3. Scroll Feed
+    console.log(`[SAN] Trying scrollFeed`);
     scrollFeed();
     if (await moved(oldPath)) {
       console.log(`[SAN] Moved via scroll`);
       return afterMove();
     }
 
+    // 4. URL Navigation (Last Resort - Refined)
     const url = findNextShortUrl();
     if (url) {
       console.log(`[SAN] Navigating to URL: ${url}`);
@@ -222,7 +245,7 @@
       return;
     }
 
-    console.log(`[SAN] URL not found, final scroll attempt`);
+    console.log(`[SAN] All methods failed, final scroll attempt`);
     scrollFeed();
     await wait(500);
     afterMove();
